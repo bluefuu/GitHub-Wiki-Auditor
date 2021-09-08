@@ -1,5 +1,5 @@
 # GitHub-Wiki-Auditor
-Script forked from SmeegeSec[here](https://github.com/SmeegeSec/GitHub-Wiki-Auditor).
+Script forked from SmeegeSec [here](https://github.com/SmeegeSec/GitHub-Wiki-Auditor).
 
 Usage:
 ```
