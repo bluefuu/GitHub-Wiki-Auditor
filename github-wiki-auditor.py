@@ -6,7 +6,7 @@ import time
 import os
 from getpass import getpass
 from datetime import datetime
-from lxml import html
+from bs4 import BeautifulSoup
 
 
 def main():
@@ -45,19 +45,18 @@ def main():
           print("\n[*] 429 Too Many Requests response received - sleeping 15 seconds.\n")
           time.sleep(15)
         
-        wiki = html.fromstring(wikiResponse.content)
+        wiki = BeautifulSoup(wikiResponse.text, "html.parser")
 
         try:
           print("--------Scanning: {}".format(repo))
-          wikiTitle = wiki.find(".//title").text
+          wikiTitle = wiki.find('title').string
+          print("The wiki title is {}.".format(wikiTitle))
           if "Create New Page" in wikiTitle:
             print("\t Public wiki found!")
             wikiListFile.write("\t\t {}\n".format(repo))
         except:
           print("\t No title found on repo")
         
-        
-    
     except Exception as e:
       rateLimitRequest = gitHubSession.get("https://api.github.com/rate_limit")
       rateLimit = json.loads(rateLimitRequest.content)["rate"]["remaining"]
@@ -110,13 +109,19 @@ def getAccounts(accountsFile):
   return accounts
     
 def login(gitHubSession, username, password):     
+  loginData = {
+    'login': username,
+    'password': password, 'js-webauthn-support': 'supported', 'js-webauthn-iuvpaa-support': 'unsupported',
+    'commit': 'Sign in'
+  }
   gitHubLogin = gitHubSession.get("https://www.github.com/login")
-  loginTree = html.fromstring(gitHubLogin.content)
-  loginData = {i.get('name'):i.get('value') for i in loginTree.cssselect('input')}
-  loginData["login"] = username
-  loginData["password"] = password
+  html = BeautifulSoup(gitHubLogin.text, "html.parser")
+  loginData.update(timestamp_secret = html.find("input", {'name':'timestamp_secret'}).get('value'))
+  loginData.update(authenticity_token= html.find("input", {'name':'authenticity_token'}).get('value'))
+  loginData.update(timestamp = html.find("input", {'name':'timestamp'}).get('value'))
 
   loginResponse = gitHubSession.post("https://github.com/session", data=loginData)
+
   if "Incorrect username or password" in loginResponse.text:
     print("[*]Exiting - Login failed.")
     sys.exit(1)
